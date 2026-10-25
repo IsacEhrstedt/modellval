@@ -1,7 +1,7 @@
 import { describe, expect, mock, test as baseTest } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
-import { helperFloor, namedEffort, hotVisible, looksLikeRedo, REDO_STAY_PROMPTS, routeWorth, syncPlan, tipped, bounded, handoffEvidence, parseHandoffAnswer, withJevKey, parseVerdict, capped, resetLabel, HANDOFF_PROMPT, handoffMessage, withAttachments, endsOnQuestion, keepsEffort, benchGrade, benchReport, judgeFailure, contextFrom, readConfig, asSpent, cacheColor, cacheLabel, cacheClock, cacheSafe, cacheTtlOf, mostlyCached, isFollowUp, parseJevAnswer, parseJevKey, savedText, forkOutcome, setupNext, setupBack, setupCounter, dashboardLines, flashColor, handoffGlowStep, weighted, handoffLook, isNewer, latestRelease, updateSnoozed, updateFailure, claudeCandidates, noClaudeHint, compactTranscript, judgeGlowSvg, judgeGlowAt, judgeBrightnessAt, JUDGE_RISE_MS, JUDGE_FADE_MS, JUDGE_STEP_MS, JUDGE_PIECE_MS } from '../hooks/register'
+import { helperFloor, namedEffort, hotVisible, looksLikeRedo, REDO_STAY_PROMPTS, routeWorth, syncPlan, tipped, bounded, handoffEvidence, parseHandoffAnswer, withJevKey, parseVerdict, capped, resetLabel, HANDOFF_PROMPT, handoffMessage, withAttachments, endsOnQuestion, keepsEffort, benchGrade, benchReport, judgeFailure, contextFrom, userText, readConfig, asSpent, cacheColor, cacheLabel, cacheClock, cacheSafe, cacheTtlOf, mostlyCached, isFollowUp, parseJevAnswer, parseJevKey, savedText, forkOutcome, setupNext, setupBack, setupCounter, dashboardLines, flashColor, handoffGlowStep, weighted, handoffLook, isNewer, latestRelease, updateSnoozed, updateFailure, claudeCandidates, noClaudeHint, compactTranscript, judgeGlowSvg, judgeGlowAt, judgeBrightnessAt, JUDGE_RISE_MS, JUDGE_FADE_MS, JUDGE_STEP_MS, JUDGE_PIECE_MS } from '../hooks/register'
 import { ART_COLUMNS, artFrame, artPixel, MOVING } from '../hooks/art'
 import { isLight, lightHex, lightProps, setLight, setTheme, themedEls, themedSvg, tint, tintHex } from '../hooks/theme'
 import { importsOf, moduleLinks, moduleOf, relPath, withTouch } from '../hooks/agents'
@@ -1203,6 +1203,25 @@ describe('context for the judge', () => {
     expect(text).toContain('user: make me a new section')
     expect(text.length).toBeLessThan(2500)
     expect(contextFrom([])).toBe('')
+  })
+
+  test("the desktop app's <system-reminder> blocks are taken out: the judge reads what the person typed", () => {
+    const reminder = '<system-reminder>\nThe user started this session without choosing a folder.\n</system-reminder>'
+    expect(userText(`${reminder}\n<system-reminder>Plugins reloaded.</system-reminder>\nfix the footer`)).toBe('fix the footer')
+    expect(userText(`${reminder}\n/review`).startsWith('/')).toBe(true)
+    expect(userText(reminder)).toBe('')
+    expect(userText('plain message')).toBe('plain message')
+    const context = contextFrom([
+      { role: 'user', text: 'build the settings page' },
+      { role: 'user', text: reminder },
+      { role: 'assistant', text: 'done' },
+    ])
+    expect(context).toContain('user: build the settings page')
+    expect(context).not.toContain('system-reminder')
+    const evidence = handoffEvidence([{ role: 'user', text: `${reminder}\nbuild the settings page` }, { role: 'user', text: reminder }], 'next', 10, false)
+    expect(evidence).toContain('build the settings page')
+    expect(evidence).not.toContain('system-reminder')
+    expect(evidence).toContain('1 messages so far')
   })
 
   test("Haiku is handed the assistant's question and told how to judge an answer to it", async ($, on) => {
